@@ -1,7 +1,7 @@
 import yaml
 import pandas as pd
 from sqlalchemy import create_engine
-import psycopg2
+import psycopg2 
 
     """
     The function `load_credentials` reads and loads credentials from a YAML file specified by the
