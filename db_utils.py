@@ -3,7 +3,7 @@ import pandas as pd
 from sqlalchemy import create_engine
 import psycopg2 
 
-    """
+"""
     The function `load_credentials` reads and loads credentials from a YAML file specified by the
     `yaml_file_path` parameter.
     
@@ -16,7 +16,14 @@ import psycopg2
 def load_credentials(yaml_file_path):
     with open(yaml_file_path, 'r') as file:
         credentials = yaml.safe_load(file)
-    return credentials
+    return {
+        'username': credentials['RDS_USER'],
+        'password': credentials['RDS_PASSWORD'],
+        'host': credentials['RDS_HOST'],
+        'port': credentials['RDS_PORT'],
+        'database': credentials['RDS_DATABASE']
+    }
+
 
 class RDSDatabaseConnector:
 
@@ -88,3 +95,28 @@ class RDSDatabaseConnector:
         """
 
         data_frame.to_csv(file_path, index=False)
+
+    def load_data_from_csv(self, file_path):
+        """
+        Loads data from a CSV file into a Pandas DataFrame.
+
+        :param file_path: Path to the CSV file to be loaded.
+        :return: DataFrame containing the loaded data.
+        """
+        data_frame = pd.read_csv(file_path)
+        print(data_frame.head())
+        return data_frame
+    
+if __name__ == "__main__":
+    yaml_file_path = 'credentials.yaml' 
+    credentials = load_credentials(yaml_file_path)
+    
+    db_connector = RDSDatabaseConnector(credentials)
+    db_connector.initialise_engine()
+    loan_payments_df = db_connector.fetch_loan_payments()
+    csv_file_path = 'loan_payments.csv'
+    db_connector.save_data_to_csv(loan_payments_df, csv_file_path)
+    print(f"Data saved to {csv_file_path}")
+    loaded_df = db_connector.load_data_from_csv(csv_file_path)
+    print("Data loaded successfully")
+
