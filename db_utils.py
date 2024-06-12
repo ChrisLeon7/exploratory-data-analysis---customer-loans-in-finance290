@@ -107,6 +107,7 @@ class RDSDatabaseConnector:
         print(data_frame.head())
         return data_frame
     
+
 if __name__ == "__main__":
     yaml_file_path = 'credentials.yaml' 
     credentials = load_credentials(yaml_file_path)
@@ -119,4 +120,62 @@ if __name__ == "__main__":
     print(f"Data saved to {csv_file_path}")
     loaded_df = db_connector.load_data_from_csv(csv_file_path)
     print("Data loaded successfully")
+
+
+class DataTransform:
+    def __init__(self, data_frame):
+        """
+        The above function is an initialization method in Python that assigns a DataFrame to an instance
+        variable.
+        
+        :param data_frame: The `__init__` method you provided is a constructor for a class that takes a
+        `data_frame` parameter. This parameter is used to initialize an instance variable
+        `self.data_frame` within the class
+        """
+        self.data_frame = data_frame
+
+    def to_datetime(self, column):
+        self.data_frame[column] = pd.to_datetime(self.data_frame[column])
+    
+    def to_numeric(self, column):
+        self.data_frame[column] = pd.to_numeric(self.data_frame[column])
+
+class DataFrameInfo:
+
+    def __init__(self, data_frame):
+        self.data_frame = data_frame
+
+    def describe_columns(self):
+        return self.data_frame.dtypes
+
+    def extract_statistics(self):
+        statistics = {
+            'median': self.data_frame.median(),
+            'std_dev': self.data_frame.std(),
+            'mean': self.data_frame.mean()
+        }
+        return statistics
+
+    def count_distinct_values(self):
+        categorical_columns = self.data_frame.select_dtypes(include=['category', 'object']).columns
+        distinct_counts = {col: self.data_frame[col].nunique() for col in categorical_columns}
+        return distinct_counts
+
+    def print_shape(self):
+        return self.data_frame.shape
+
+    def count_null_values(self):
+        null_counts = self.data_frame.isnull().sum()
+        null_percentages = (self.data_frame.isnull().mean() * 100).round(2)
+        return pd.DataFrame({'null_count': null_counts, 'null_percentage': null_percentages})
+
+    def summary(self):
+        summary_info = {
+            'shape': self.print_shape(),
+            'column_descriptions': self.describe_columns(),
+            'statistics': self.extract_statistics(),
+            'distinct_value_counts': self.count_distinct_values(),
+            'null_values': self.count_null_values()
+        }
+        return summary_info
 
