@@ -77,120 +77,6 @@ class DataTransform:
         for symbol in symbols:
             self.data_frame[column] = self.data_frame[column].str.replace(symbol, '')
         return self.data_frame
-    
-    def identify_skewed_columns(self, skew_threshold=0.75):
-        """
-        The function `identify_skewed_columns` calculates the skewness of columns in a DataFrame and
-        returns a list of columns that are skewed beyond a specified threshold.
-        
-        :param skew_threshold: The `skew_threshold` parameter is a value that is used to determine the
-        threshold for identifying skewed columns in a dataset. Columns with skewness values greater than
-        this threshold are considered to be skewed. The default value for `skew_threshold` is set to
-        0.75 in the provided code
-        :return: The function `identify_skewed_columns` returns a list of column names from the data
-        frame that have skewness values greater than the specified threshold (default threshold is
-        0.75).
-        """
-        numeric_columns = self.data_frame.select_dtypes(include=['number']).columns
-        skewness = self.data_frame[numeric_columns].skew()
-        skewed_columns = skewness[abs(skewness) > skew_threshold].index.tolist()
-        return skewed_columns
-    
-    def apply_transformation(self, col, transformation):
-        if transformation == 'log':
-            return np.log1p(self.data_frame[col])
-        elif transformation == 'sqrt':
-            return np.sqrt(self.data_frame[col])
-        elif transformation == 'boxcox':
-            return pd.Series(scipy.stats.boxcox(self.data_frame[col] + 1)[0], index=self.data_frame.index)
-        else:
-            raise ValueError("Unsupported transformation")
-
-    def find_best_transformation(self, col):
-        """
-        The function `find_best_transformation` determines the best transformation method for a given
-        column to minimize skewness.
-        
-        :param col: The `find_best_transformation` method you provided aims to find the best
-        transformation for a given column `col` by comparing the skewness of the column after applying
-        different transformations such as 'log', 'sqrt', and 'boxcox'
-        :return: The function `find_best_transformation` returns the best transformation method ('log',
-        'sqrt', or 'boxcox') that minimizes the skewness of the input column `col`.
-        """
-        transformations = ['log', 'sqrt', 'boxcox']
-        best_transformation = None
-        min_skew = np.inf
-
-        # The above Python code is iterating through a list of transformations and applying each
-        # transformation to a column. It then calculates the skewness of the transformed column and
-        # checks if the absolute skewness is less than a minimum skew value. If the absolute skewness
-        # is less than the current minimum skew value, it updates the minimum skew value and records
-        # the best transformation. Finally, it returns the best transformation found.
-        for transformation in transformations:
-            transformed_col = self.apply_transformation(col, transformation)
-            skewness = transformed_col.skew()
-
-            if abs(skewness) < min_skew:
-                min_skew = abs(skewness)
-                best_transformation = transformation
-        return best_transformation
-    
-    def transform_skewed_columns(self, columns=None):
-        # This block of code is from the `transform_skewed_columns` method within the `DataTransform`
-        # class. Let's break down what it does:
-        if columns is None:
-            columns = self.identify_skewed_columns()
-        
-        for col in columns:
-            if col in self.data_frame.select_dtypes(include=['number']).columns:
-                self.data_frame[col] = np.log1p(self.data_frame[col])
-
-    def visualize_skewness(self, columns):
-        for col in columns:
-            plt.figure(figsize=(10, 6))
-            sns.histplot(self.data_frame[col], kde=True)
-            plt.title(f'Skewness of {col}: {self.data_frame[col].skew():.2f}')
-            plt.show()
-
-    def save_dataframe(self, path):
-        self.data_frame.to_csv(path, index=False)
-
-    def plot_outliers(self, columns=None):
-        if columns is None:
-            columns = self.data_frame.select_dtypes(include=['number']).columns
-        
-        plotter = Plotter(self.data_frame)
-        plotter.plot_boxplot(columns)
-        plotter.plot_histogram(columns)
-    
-    def remove_outliers(self, columns=None, method='iqr', threshold=1.5):
-        if columns is None:
-            columns = self.data_frame.select_dtypes(include=['number']).columns
-        
-        for col in columns:
-            if method == 'iqr':
-                q1 = self.data_frame[col].quantile(0.25)
-                q3 = self.data_frame[col].quantile(0.75)
-                iqr = q3 - q1
-                lower_bound = q1 - threshold * iqr
-                upper_bound = q3 + threshold * iqr
-                self.data_frame = self.data_frame[(self.data_frame[col] >= lower_bound) & (self.data_frame[col] <= upper_bound)]
-            elif method == 'z-score':
-                z_scores = np.abs((self.data_frame[col] - self.data_frame[col].mean()) / self.data_frame[col].std())
-                self.data_frame = self.data_frame[z_scores < threshold]
-            else:
-                raise ValueError("Unsupported method. Use 'iqr' or 'z-score'.")
-    
-    def visualize_after_outliers_removal(self, columns=None):
-        if columns is None:
-            columns = self.data_frame.select_dtypes(include=['number']).columns
-        
-        plotter = Plotter(self.data_frame)
-        plotter.plot_boxplot(columns)
-        plotter.plot_histogram(columns)
-    
-    def testing_import(self, message):
-        return f"Message received: {message}"
 
   
 class DataFrameInfo:
@@ -288,6 +174,193 @@ class DataFrameTransform:
         """
         return self.data_frame.isnull().sum().to_dict()
     
+    def identify_skewed_columns(self, skew_threshold=0.75):
+        """
+        The function `identify_skewed_columns` calculates the skewness of columns in a DataFrame and
+        returns a list of columns that are skewed beyond a specified threshold.
+        
+        :param skew_threshold: The `skew_threshold` parameter is a value that is used to determine the
+        threshold for identifying skewed columns in a dataset. Columns with skewness values greater than
+        this threshold are considered to be skewed. The default value for `skew_threshold` is set to
+        0.75 in the provided code
+        :return: The function `identify_skewed_columns` returns a list of column names from the data
+        frame that have skewness values greater than the specified threshold (default threshold is
+        0.75).
+        """
+        numeric_columns = self.data_frame.select_dtypes(include=['number']).columns
+        skewness = self.data_frame[numeric_columns].skew()
+        skewed_columns = skewness[abs(skewness) > skew_threshold].index.tolist()
+        return skewed_columns
+    
+    def apply_transformation(self, col, transformation):
+        if transformation == 'log':
+            return np.log1p(self.data_frame[col])
+        elif transformation == 'sqrt':
+            return np.sqrt(self.data_frame[col])
+        elif transformation == 'boxcox':
+            return pd.Series(scipy.stats.boxcox(self.data_frame[col] + 1)[0], index=self.data_frame.index)
+        else:
+            raise ValueError("Unsupported transformation")
+
+    def find_best_transformation(self, col):
+        """
+        The function `find_best_transformation` determines the best transformation method for a given
+        column to minimize skewness.
+        
+        :param col: The `find_best_transformation` method you provided aims to find the best
+        transformation for a given column `col` by comparing the skewness of the column after applying
+        different transformations such as 'log', 'sqrt', and 'boxcox'
+        :return: The function `find_best_transformation` returns the best transformation method ('log',
+        'sqrt', or 'boxcox') that minimizes the skewness of the input column `col`.
+        """
+        transformations = ['log', 'sqrt', 'boxcox']
+        best_transformation = None
+        min_skew = np.inf
+
+        # The above Python code is iterating through a list of transformations and applying each
+        # transformation to a column. It then calculates the skewness of the transformed column and
+        # checks if the absolute skewness is less than a minimum skew value. If the absolute skewness
+        # is less than the current minimum skew value, it updates the minimum skew value and records
+        # the best transformation. Finally, it returns the best transformation found.
+        for transformation in transformations:
+            transformed_col = self.apply_transformation(col, transformation)
+            skewness = transformed_col.skew()
+
+            if abs(skewness) < min_skew:
+                min_skew = abs(skewness)
+                best_transformation = transformation
+        return best_transformation
+    
+    def transform_skewed_columns(self, columns=None):
+        # This block of code is from the `transform_skewed_columns` method within the `DataTransform`
+        # class. Let's break down what it does:
+        if columns is None:
+            columns = self.identify_skewed_columns()
+        
+        for col in columns:
+            if col in self.data_frame.select_dtypes(include=['number']).columns:
+                self.data_frame[col] = np.log1p(self.data_frame[col])
+
+    def visualize_skewness(self, columns):
+        for col in columns:
+            plt.figure(figsize=(10, 6))
+            sns.histplot(self.data_frame[col], kde=True)
+            plt.title(f'Skewness of {col}: {self.data_frame[col].skew():.2f}')
+            plt.show()
+  
+    def save_dataframe(self, path):
+        self.data_frame.to_csv(path, index=False)
+
+    def plot_outliers(self, columns=None):
+        """
+        This function plots boxplots and histograms for numerical columns in a DataFrame.
+        
+        :param columns: The `columns` parameter in the `plot_outliers` method is used to specify which
+        columns from the DataFrame should be included in the outlier analysis and visualization. If no
+        specific columns are provided, the method will default to selecting all numerical columns from
+        the DataFrame for the analysis
+        """
+        if columns is None:
+            columns = self.data_frame.select_dtypes(include=['number']).columns
+        
+        plotter = Plotter(self.data_frame)
+        plotter.plot_boxplot(columns)
+        plotter.plot_histogram(columns)
+    
+    def remove_outliers(self, columns=None, method='iqr', threshold=1.5):
+        """
+        The function `remove_outliers` takes a DataFrame and removes outliers from specified numerical
+        columns using either the IQR method or z-score method based on the chosen threshold.
+        
+        :param columns: The `columns` parameter in the `remove_outliers` method is used to specify which
+        columns in the DataFrame should be processed for outlier removal. If `columns` is not provided
+        (i.e., it is set to `None`), then all columns of numeric data type in the DataFrame will be
+        :param method: The `method` parameter in the `remove_outliers` function determines the method
+        used to identify and remove outliers from the data. It can take two values:, defaults to iqr
+        (optional)
+        :param threshold: The `threshold` parameter in the `remove_outliers` method determines how far
+        away from the median or quartiles a data point must be to be considered an outlier. It is used
+        in conjunction with the chosen method ('iqr' or 'z-score') to define the boundaries for
+        identifying outliers in
+        """
+        if columns is None:
+            columns = self.data_frame.select_dtypes(include=['number']).columns
+        
+        for col in columns:
+            if method == 'iqr':
+                q1 = self.data_frame[col].quantile(0.25)
+                q3 = self.data_frame[col].quantile(0.75)
+                iqr = q3 - q1
+                lower_bound = q1 - threshold * iqr
+                upper_bound = q3 + threshold * iqr
+                self.data_frame = self.data_frame[(self.data_frame[col] >= lower_bound) & (self.data_frame[col] <= upper_bound)]
+            elif method == 'z-score':
+                z_scores = np.abs((self.data_frame[col] - self.data_frame[col].mean()) / self.data_frame[col].std())
+                self.data_frame = self.data_frame[z_scores < threshold]
+            else:
+                raise ValueError("Unsupported method. Use 'iqr' or 'z-score'.")
+    
+    def visualize_after_outliers_removal(self, columns=None):
+        """
+        The function `visualize_after_outliers_removal` generates boxplots and histograms for numerical
+        columns in a DataFrame.
+        
+        :param columns: The `columns` parameter in the `visualize_after_outliers_removal` method is used
+        to specify which columns from the data frame should be visualized after removing outliers. If no
+        specific columns are provided, it defaults to visualizing all numerical columns in the data
+        frame
+        """
+        if columns is None:
+            columns = self.data_frame.select_dtypes(include=['number']).columns
+        
+        plotter = Plotter(self.data_frame)
+        plotter.plot_boxplot(columns)
+        plotter.plot_histogram(columns)
+
+    def compute_correlation_matrix(self):
+        """
+        Compute the correlation matrix for numerical columns in the dataset.
+        """
+        numeric_columns = self.data_frame.select_dtypes(include=['number'])
+        corr_matrix = numeric_columns.corr()
+        return corr_matrix
+    
+    
+    def visualize_correlation_matrix(self):
+        """
+        The function `visualize_correlation_matrix` generates a heatmap visualization of the correlation
+        matrix with annotations and specific color mapping.
+        """   
+        corr_matrix = self.compute_correlation_matrix()
+        plt.figure(figsize=(10, 8))
+        sns.heatmap(corr_matrix, annot=True, cmap='coolwarm', fmt=".2f", vmin=-1, vmax=1)
+        plt.title("Correlation Matrix Heatmap")
+        plt.show()
+    
+    def remove_highly_correlated_columns(self, threshold=0.8):
+        """
+        The function removes columns from a DataFrame that are highly correlated with each other based
+        on a specified threshold.
+        
+        :param threshold: The `threshold` parameter in the `remove_highly_correlated_columns` function
+        represents the maximum correlation value between two columns that is considered to be highly
+        correlated. Any pair of columns with a correlation value greater than this threshold will be
+        identified as highly correlated and one of them will be dropped from the DataFrame
+        :return: The function `remove_highly_correlated_columns` returns a list of column names that
+        were dropped from the DataFrame due to high correlation with other columns above the specified
+        threshold.
+        """
+      
+        corr_matrix = self.compute_correlation_matrix()
+        upper_tri = corr_matrix.where(np.triu(np.ones(corr_matrix.shape), k=1).astype(bool))
+        to_drop = [column for column in upper_tri.columns if any(upper_tri[column] > threshold)]
+        
+        self.data_frame.drop(to_drop, axis=1, inplace=True)
+        return to_drop
+    
+    def testing_import(self, message):
+        return f"Message received: {message}"
+    
 class Plotter:
     def __init__(self, data_frame):
         self.data_frame = data_frame
@@ -358,3 +431,18 @@ class Plotter:
         # indentation is incorrect. The correct code should be:
         plt.tight_layout()
         plt.show()
+    
+    def plot_boxplot(self, columns):
+        for col in columns:
+            plt.figure(figsize=(8, 6))
+            sns.boxplot(x=self.data_frame[col])
+            plt.title(f'Boxplot of {col}')
+            plt.show()
+
+    def plot_histogram(self, columns):
+        for col in columns:
+            plt.figure(figsize=(8, 6))
+            sns.histplot(self.data_frame[col], bins=20, kde=True)
+            plt.title(f'Histogram of {col}')
+            plt.show()
+
