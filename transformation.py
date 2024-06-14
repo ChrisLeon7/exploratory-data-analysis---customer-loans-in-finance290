@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
-
+import seaborn as sns
 
 class DataTransform:
     def __init__(self, data_frame):
@@ -96,6 +96,45 @@ class DataTransform:
         skewed_columns = skewness[abs(skewness) > skew_threshold].index.tolist()
         return skewed_columns
     
+    def apply_transformation(self, col, transformation):
+        if transformation == 'log':
+            return np.log1p(self.data_frame[col])
+        elif transformation == 'sqrt':
+            return np.sqrt(self.data_frame[col])
+        elif transformation == 'boxcox':
+            return pd.Series(scipy.stats.boxcox(self.data_frame[col] + 1)[0], index=self.data_frame.index)
+        else:
+            raise ValueError("Unsupported transformation")
+
+    def find_best_transformation(self, col):
+        """
+        The function `find_best_transformation` determines the best transformation method for a given
+        column to minimize skewness.
+        
+        :param col: The `find_best_transformation` method you provided aims to find the best
+        transformation for a given column `col` by comparing the skewness of the column after applying
+        different transformations such as 'log', 'sqrt', and 'boxcox'
+        :return: The function `find_best_transformation` returns the best transformation method ('log',
+        'sqrt', or 'boxcox') that minimizes the skewness of the input column `col`.
+        """
+        transformations = ['log', 'sqrt', 'boxcox']
+        best_transformation = None
+        min_skew = np.inf
+
+        # The above Python code is iterating through a list of transformations and applying each
+        # transformation to a column. It then calculates the skewness of the transformed column and
+        # checks if the absolute skewness is less than a minimum skew value. If the absolute skewness
+        # is less than the current minimum skew value, it updates the minimum skew value and records
+        # the best transformation. Finally, it returns the best transformation found.
+        for transformation in transformations:
+            transformed_col = self.apply_transformation(col, transformation)
+            skewness = transformed_col.skew()
+
+            if abs(skewness) < min_skew:
+                min_skew = abs(skewness)
+                best_transformation = transformation
+        return best_transformation
+    
     def transform_skewed_columns(self, columns=None):
         # This block of code is from the `transform_skewed_columns` method within the `DataTransform`
         # class. Let's break down what it does:
@@ -105,6 +144,50 @@ class DataTransform:
         for col in columns:
             if col in self.data_frame.select_dtypes(include=['number']).columns:
                 self.data_frame[col] = np.log1p(self.data_frame[col])
+
+    def visualize_skewness(self, columns):
+        for col in columns:
+            plt.figure(figsize=(10, 6))
+            sns.histplot(self.data_frame[col], kde=True)
+            plt.title(f'Skewness of {col}: {self.data_frame[col].skew():.2f}')
+            plt.show()
+
+    def save_dataframe(self, path):
+        self.data_frame.to_csv(path, index=False)
+
+    def plot_outliers(self, columns=None):
+        if columns is None:
+            columns = self.data_frame.select_dtypes(include=['number']).columns
+        
+        plotter = Plotter(self.data_frame)
+        plotter.plot_boxplot(columns)
+        plotter.plot_histogram(columns)
+    
+    def remove_outliers(self, columns=None, method='iqr', threshold=1.5):
+        if columns is None:
+            columns = self.data_frame.select_dtypes(include=['number']).columns
+        
+        for col in columns:
+            if method == 'iqr':
+                q1 = self.data_frame[col].quantile(0.25)
+                q3 = self.data_frame[col].quantile(0.75)
+                iqr = q3 - q1
+                lower_bound = q1 - threshold * iqr
+                upper_bound = q3 + threshold * iqr
+                self.data_frame = self.data_frame[(self.data_frame[col] >= lower_bound) & (self.data_frame[col] <= upper_bound)]
+            elif method == 'z-score':
+                z_scores = np.abs((self.data_frame[col] - self.data_frame[col].mean()) / self.data_frame[col].std())
+                self.data_frame = self.data_frame[z_scores < threshold]
+            else:
+                raise ValueError("Unsupported method. Use 'iqr' or 'z-score'.")
+    
+    def visualize_after_outliers_removal(self, columns=None):
+        if columns is None:
+            columns = self.data_frame.select_dtypes(include=['number']).columns
+        
+        plotter = Plotter(self.data_frame)
+        plotter.plot_boxplot(columns)
+        plotter.plot_histogram(columns)
     
     def testing_import(self, message):
         return f"Message received: {message}"
