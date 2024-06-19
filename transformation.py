@@ -400,6 +400,7 @@ class Plotter:
         # bar_width, label='After Removal')` in the `Plotter` class is creating two sets of bar plots
         # on the same figure to visually compare the count of NULL values before and after any removal
         # or processing has been done on the DataFrame.
+        global rects1, rects2
         rects1 = ax.bar(indices, null_counts_before, bar_width, label='Before Removal')
         rects2 = ax.bar([i + bar_width for i in indices], null_counts_after, bar_width, label='After Removal')
         
